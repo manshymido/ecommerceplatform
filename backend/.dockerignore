@@ -1,0 +1,19 @@
+# Reduce image size and avoid copying secrets
+.git
+.env
+.env.*
+!.env.example
+vendor
+node_modules
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+*.log
+.phpunit.result.cache
+phpunit.xml
+tests
+load-tests
+.editorconfig
+pint.json
