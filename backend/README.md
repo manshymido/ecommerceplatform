@@ -1,59 +1,89 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# E-commerce API (Laravel Backend)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+> Backend for [ecommerceplatform](https://github.com/manshymido/ecommerceplatform). This directory contains the Laravel API only.
 
-## About Laravel
+Laravel-based API for a high-scale e-commerce platform. Modular monolith with hexagonal/DDD-style modules: catalog, inventory, cart, promotions, checkout, orders, payments (Stripe), shipping, wishlist, and product reviews.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Requirements
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- PHP 8.2+
+- Composer
+- SQLite (default) or MySQL / MariaDB
+- Optional: Redis (cache), Node (frontend assets)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Installation
 
-## Learning Laravel
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Configure `.env` (database, cache, Stripe keys if using payments). Then:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-## Laravel Sponsors
+Create the SQLite file if using default DB:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+touch database/database.sqlite
+```
 
-### Premium Partners
+## Run locally
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+php artisan serve
+```
 
-## Contributing
+API base: `http://localhost:8000`. Health: `http://localhost:8000/up`, readiness: `http://localhost:8000/ready`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Testing
 
-## Code of Conduct
+```bash
+php artisan test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+See `TESTING.md` for more detail. Load tests (k6) are in `load-tests/`.
 
-## Security Vulnerabilities
+## API overview
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+| Area        | Examples                                      |
+|------------|------------------------------------------------|
+| **Catalog**| `GET /api/products`, `GET /api/products/{slug}`, categories, brands |
+| **Cart**   | `GET/POST/PATCH/DELETE /api/cart`, items, coupon |
+| **Checkout** | `POST /api/checkout` (guest or auth)         |
+| **Orders** | `GET /api/orders`, `GET /api/orders/{id}` (auth) |
+| **Payments** | `POST /api/orders/{id}/pay` (Stripe)         |
+| **Shipping** | `GET /api/shipping/quotes`                    |
+| **Wishlist** | `GET/POST/DELETE /api/wishlist` (auth)       |
+| **Reviews**| `GET/POST /api/products/{slug}/reviews`       |
+| **Admin**  | `GET /api/admin/*` (role: admin)               |
+
+Postman collection: `postman/`.
+
+## Project structure
+
+- `app/` – HTTP layer, events, listeners, mail
+- `app/Modules/` – Domain modules (Cart, Catalog, Inventory, Order, Payment, Promotion, Review, Shipping, Wishlist)
+- `config/`, `routes/` – Laravel config and API routes
+- `database/migrations/`, `database/seeders/` – Schema and seeds
+- `docs/` (repo root) – Architecture, deployment, runbooks, backups
+
+## Docker
+
+```bash
+docker build -t ecommerce-backend .
+docker run -p 8000:8000 --env-file .env ecommerce-backend
+```
+
+## Docs and CI
+
+- **Tests:** CI runs `php artisan test` on push/PR (see repo root [.github/workflows/tests.yml](https://github.com/manshymido/ecommerceplatform/blob/main/.github/workflows/tests.yml)).
+- **Docs:** Architecture, deployment, runbooks, and backups are in the [repo root `docs/`](https://github.com/manshymido/ecommerceplatform/tree/main/docs).
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT.
