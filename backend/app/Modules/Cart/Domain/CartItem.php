@@ -13,6 +13,11 @@ class CartItem
         public readonly string $unitPriceCurrency,
         public readonly float $discountAmount,
         public readonly ?string $discountCurrency,
+        public readonly ?string $variantName = null,
+        public readonly ?string $variantSku = null,
+        public readonly ?string $productName = null,
+        public readonly ?string $productSlug = null,
+        public readonly ?string $productImageUrl = null,
     ) {
     }
 

@@ -4,7 +4,6 @@ namespace App\Modules\Inventory\Application;
 
 use App\Modules\Inventory\Application\Dto\ReservationItem;
 use App\Modules\Inventory\Domain\AvailabilityResult;
-use App\Modules\Inventory\Domain\StockReservation;
 use App\Modules\Inventory\Domain\StockItemRepository;
 use App\Modules\Inventory\Domain\StockReservationRepository;
 
@@ -41,7 +40,8 @@ class InventoryService
 
     /**
      * Reserve stock for a cart or order draft.
-     * Uses default warehouse (id=1); returns true if all items could be reserved.
+     * Allocates from any warehouse(s) that have available stock. Must be called inside a DB transaction;
+     * call lockForUpdate on relevant variants before calling this to avoid race conditions.
      *
      * @param  ReservationItem[]  $items
      */
@@ -51,40 +51,64 @@ class InventoryService
         foreach ($items as $item) {
             $variantQuantities[$item->productVariantId] = ($variantQuantities[$item->productVariantId] ?? 0) + $item->quantity;
         }
+        $variantIds = array_keys($variantQuantities);
 
-        $availability = $this->checkAvailability($variantQuantities, null);
-        foreach ($availability as $result) {
-            if (! $result->isAvailable) {
-                return false;
-            }
-        }
+        $this->stockItemRepository->lockForUpdate($variantIds);
+        $availablePerWarehouse = $this->stockItemRepository->getAvailableByVariantPerWarehouse($variantIds);
 
         $expiresAt ??= now()->addMinutes(30);
-        $defaultWarehouseId = 1;
+        $toReserve = []; // [(variantId, warehouseId, qty), ...]
 
         foreach ($items as $item) {
-            $available = $this->stockItemRepository->getAvailableByVariants([$item->productVariantId], $defaultWarehouseId);
-            if (($available[$item->productVariantId] ?? 0) < $item->quantity) {
+            $need = $item->quantity;
+            $variantId = $item->productVariantId;
+            $warehouseKeys = [];
+            foreach (array_keys($availablePerWarehouse) as $key) {
+                $parts = explode('_', $key);
+                if (isset($parts[0], $parts[1]) && (int) $parts[0] === $variantId) {
+                    $warehouseKeys[] = $key;
+                }
+            }
+            usort($warehouseKeys, fn (string $a, string $b): int => (int) explode('_', $a)[1] <=> (int) explode('_', $b)[1]);
+            foreach ($warehouseKeys as $key) {
+                if ($need <= 0) {
+                    break;
+                }
+                $available = $availablePerWarehouse[$key] ?? 0;
+                $take = min($need, $available);
+                if ($take > 0) {
+                    $parts = explode('_', $key);
+                    $warehouseId = (int) ($parts[1] ?? 0);
+                    $toReserve[] = [(int) $variantId, $warehouseId, $take];
+                    $availablePerWarehouse[$key] = $available - $take;
+                    $need -= $take;
+                }
+            }
+            if ($need > 0) {
                 $this->releaseReservations($sourceType, $sourceId);
 
                 return false;
             }
-            $this->stockReservationRepository->reserve($item->productVariantId, $defaultWarehouseId, $item->quantity, $sourceType, $sourceId, $expiresAt);
+        }
+
+        foreach ($toReserve as [$variantId, $warehouseId, $qty]) {
+            $this->stockReservationRepository->reserve($variantId, $warehouseId, $qty, $sourceType, $sourceId, $expiresAt);
         }
 
         return true;
     }
 
+    /**
+     * Commit reserved stock: marks reservations as consumed and decrements
+     * actual stock_items.quantity.  Called when payment succeeds.
+     */
+    public function commitStock(string $sourceType, int $sourceId): void
+    {
+        $this->stockReservationRepository->markConsumedBySource($sourceType, $sourceId);
+    }
+
     public function releaseReservations(string $sourceType, int $sourceId): void
     {
         $this->stockReservationRepository->releaseBySource($sourceType, $sourceId);
-    }
-
-    /**
-     * Consume reserved stock for an order (deduct from stock_items, record movements, mark reservations consumed).
-     */
-    public function finalizeStockForOrder(int $orderId): void
-    {
-        $this->stockReservationRepository->markConsumedBySource(StockReservation::SOURCE_ORDER, $orderId);
     }
 }

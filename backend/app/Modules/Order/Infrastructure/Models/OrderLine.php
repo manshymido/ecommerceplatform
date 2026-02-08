@@ -2,14 +2,18 @@
 
 namespace App\Modules\Order\Infrastructure\Models;
 
+use App\Modules\Catalog\Infrastructure\Models\Product;
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
+use App\Modules\Shipping\Infrastructure\Models\ShipmentItem;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderLine extends Model
 {
     protected $fillable = [
         'order_id',
+        'product_id',
         'product_variant_id',
         'product_name_snapshot',
         'sku_snapshot',
@@ -38,8 +42,18 @@ class OrderLine extends Model
         return $this->belongsTo(Order::class);
     }
 
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
+    }
+
+    public function shipmentItems(): HasMany
+    {
+        return $this->hasMany(ShipmentItem::class);
     }
 }

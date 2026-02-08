@@ -15,7 +15,13 @@ class FulfillmentService
     ) {
     }
 
-    public function createShipment(int $orderId, ?string $trackingNumber = null, ?string $carrierCode = null): Shipment
+    /**
+     * Create a shipment for an order. Optionally specify which order lines (and quantities) are in this shipment.
+     * If $items is empty, all order lines are included with their full quantity (full fulfillment).
+     *
+     * @param  array<int, array{order_line_id: int, quantity: int}>  $items
+     */
+    public function createShipment(int $orderId, ?string $trackingNumber = null, ?string $carrierCode = null, array $items = []): Shipment
     {
         $order = $this->orderRepository->findById($orderId);
         if (! $order) {
@@ -25,11 +31,18 @@ class FulfillmentService
             throw new \DomainException('Order must be paid before creating a shipment.');
         }
 
+        if ($items === []) {
+            foreach ($order->lines as $line) {
+                $items[] = ['order_line_id' => $line->id, 'quantity' => $line->quantity];
+            }
+        }
+
         return $this->shipmentRepository->create([
             'order_id' => $orderId,
             'tracking_number' => $trackingNumber,
             'carrier_code' => $carrierCode,
             'status' => Shipment::STATUS_PENDING,
+            'items' => $items,
         ]);
     }
 

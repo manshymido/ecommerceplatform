@@ -47,6 +47,11 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Review\Infrastructure\Models\ProductReview::class);
+    }
+
     /** Eager loads for single product / detail (with variant prices). */
     public static function defaultEagerLoads(): array
     {

@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Resources\ShippingQuoteResource;
 use App\Modules\Shipping\Application\ShippingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ShippingController extends Controller
+class ShippingController extends ApiBaseController
 {
     public function __construct(
         private ShippingService $shippingService
@@ -36,6 +35,6 @@ class ShippingController extends Controller
 
         $quotes = $this->shippingService->getQuotes($countryCode, $cartTotal, $currency, $weightKg);
 
-        return ApiResponse::collection(ShippingQuoteResource::collection(collect($quotes)));
+        return $this->collection(ShippingQuoteResource::collection(collect($quotes)));
     }
 }

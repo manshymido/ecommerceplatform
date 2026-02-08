@@ -16,6 +16,9 @@ interface CartRepository
 
     public function addOrUpdateItem(int $cartId, int $productVariantId, int $quantity, float $unitPriceAmount, string $currency, float $discountAmount = 0, ?string $discountCurrency = null): void;
 
+    /** @return array{cart_id: int, product_variant_id: int, quantity: int}|null */
+    public function findCartItem(int $cartItemId): ?array;
+
     public function updateItemQuantity(int $cartItemId, int $quantity): void;
 
     public function removeItem(int $cartItemId): void;

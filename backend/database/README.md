@@ -58,4 +58,10 @@ php artisan db:seed --class=RoleSeeder
 
 # Seed test users
 php artisan db:seed --class=TestUserSeeder
+
+# Seed ~10k catalog records (50 brands, 100 categories, 10k products with variants, prices, stock)
+php artisan db:seed --class=LargeDatasetSeeder
+
+# Seed everything (test user + LargeDatasetSeeder)
+php artisan db:seed
 ```

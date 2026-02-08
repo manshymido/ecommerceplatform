@@ -52,4 +52,24 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserAddress::class);
     }
+
+    public function orders()
+    {
+        return $this->hasMany(\App\Modules\Order\Infrastructure\Models\Order::class);
+    }
+
+    public function cart()
+    {
+        return $this->hasOne(\App\Modules\Cart\Infrastructure\Models\Cart::class);
+    }
+
+    public function wishlist()
+    {
+        return $this->hasOne(\App\Modules\Wishlist\Infrastructure\Models\Wishlist::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(\App\Modules\Review\Infrastructure\Models\ProductReview::class);
+    }
 }

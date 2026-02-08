@@ -8,6 +8,7 @@ use App\Modules\Cart\Domain\CartRepository;
 use App\Modules\Cart\Infrastructure\Models\Cart as CartModel;
 use App\Modules\Cart\Infrastructure\Models\CartCoupon;
 use App\Modules\Cart\Infrastructure\Models\CartItem as CartItemModel;
+use App\Modules\Promotion\Infrastructure\Models\Coupon;
 
 class EloquentCartRepository implements CartRepository
 {
@@ -108,6 +109,18 @@ class EloquentCartRepository implements CartRepository
         $this->touchLastActivity($cartId);
     }
 
+    /** @inheritdoc */
+    public function findCartItem(int $cartItemId): ?array
+    {
+        $item = CartItemModel::where('id', $cartItemId)->first();
+
+        return $item ? [
+            'cart_id' => $item->cart_id,
+            'product_variant_id' => $item->product_variant_id,
+            'quantity' => $item->quantity,
+        ] : null;
+    }
+
     public function updateItemQuantity(int $cartItemId, int $quantity): void
     {
         $item = CartItemModel::findOrFail($cartItemId);
@@ -125,9 +138,12 @@ class EloquentCartRepository implements CartRepository
 
     public function setCartCoupon(int $cartId, string $couponCode, float $discountAmount, string $currency): void
     {
+        $coupon = Coupon::where('code', $couponCode)->first();
+
         CartCoupon::updateOrCreate(
             ['cart_id' => $cartId],
             [
+                'coupon_id' => $coupon?->id,
                 'coupon_code' => $couponCode,
                 'discount_amount' => $discountAmount,
                 'discount_currency' => $currency,
@@ -155,16 +171,26 @@ class EloquentCartRepository implements CartRepository
 
     private function toDomain(CartModel $model): Cart
     {
-        $items = $model->items->map(fn (CartItemModel $i) => new CartItem(
-            id: $i->id,
-            cartId: $i->cart_id,
-            productVariantId: $i->product_variant_id,
-            quantity: $i->quantity,
-            unitPriceAmount: (float) $i->unit_price_amount,
-            unitPriceCurrency: $i->unit_price_currency,
-            discountAmount: (float) $i->discount_amount,
-            discountCurrency: $i->discount_currency,
-        ))->all();
+        $items = $model->items->map(function (CartItemModel $i) {
+            $variant = $i->relationLoaded('productVariant') ? $i->productVariant : null;
+            $product = $variant?->relationLoaded('product') ? $variant->product : null;
+
+            return new CartItem(
+                id: $i->id,
+                cartId: $i->cart_id,
+                productVariantId: $i->product_variant_id,
+                quantity: $i->quantity,
+                unitPriceAmount: (float) $i->unit_price_amount,
+                unitPriceCurrency: $i->unit_price_currency,
+                discountAmount: (float) $i->discount_amount,
+                discountCurrency: $i->discount_currency,
+                variantName: $variant?->name,
+                variantSku: $variant?->sku,
+                productName: $product?->name,
+                productSlug: $product?->slug,
+                productImageUrl: $product?->main_image_url,
+            );
+        })->all();
 
         $subtotal = array_sum(array_map(fn (CartItem $i) => $i->lineTotal(), $items));
         $coupon = $model->relationLoaded('appliedCoupon') ? $model->appliedCoupon : $model->appliedCoupon()->first();

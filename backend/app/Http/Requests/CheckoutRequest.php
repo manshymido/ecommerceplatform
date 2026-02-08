@@ -18,11 +18,12 @@ class CheckoutRequest extends FormRequest
     {
         return array_merge(
             [
-                'email' => [request()->user() ? 'nullable' : 'required', 'email'],
+                'email' => [$this->user() ? 'nullable' : 'required', 'email'],
                 'shipping_method_code' => ['nullable', 'string', 'max:50'],
                 'shipping_method_name' => ['nullable', 'string', 'max:255'],
                 'shipping_amount' => ['nullable', 'numeric', 'min:0'],
                 'tax_amount' => ['nullable', 'numeric', 'min:0'],
+                'payment_intent_id' => ['nullable', 'string', 'max:255'],
             ],
             $this->addressRules('billing_address'),
             $this->addressRules('shipping_address')

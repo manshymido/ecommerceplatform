@@ -119,6 +119,7 @@ class PaymentService
 
         $refund = $this->refundRepository->create([
             'payment_id' => $paymentId,
+            'order_id' => $payment->orderId,
             'amount' => $refundAmount,
             'currency' => $payment->currency,
             'status' => Refund::STATUS_PENDING,

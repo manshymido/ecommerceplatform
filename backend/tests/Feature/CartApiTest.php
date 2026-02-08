@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Modules\Catalog\Infrastructure\Models\ProductVariant;
+use App\Modules\Inventory\Infrastructure\Models\StockItem;
+use App\Modules\Inventory\Infrastructure\Models\Warehouse;
 use App\Modules\Promotion\Infrastructure\Models\Coupon;
 use App\Modules\Promotion\Infrastructure\Models\Promotion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -17,13 +19,26 @@ class CartApiTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->createMinimalCatalog([
+        $catalog = $this->createMinimalCatalog([
             'product' => ['name' => 'P', 'slug' => 'p'],
             'brand' => ['name' => 'B', 'slug' => 'b'],
             'category' => ['name' => 'C', 'slug' => 'c'],
             'variant' => ['sku' => 'SKU1', 'name' => 'V1'],
         ]);
+        $this->seedStockForVariant($catalog['variant']->id);
         $this->seedPromotion();
+    }
+
+    protected function seedStockForVariant(int $variantId, int $qty = 100): void
+    {
+        $wh = Warehouse::firstOrCreate(
+            ['code' => 'MAIN'],
+            ['name' => 'Main', 'country_code' => 'US', 'city' => 'NYC']
+        );
+        StockItem::firstOrCreate(
+            ['product_variant_id' => $variantId, 'warehouse_id' => $wh->id],
+            ['quantity' => $qty, 'safety_stock' => 0]
+        );
     }
 
     protected function seedPromotion(): void

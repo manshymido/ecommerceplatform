@@ -3,19 +3,20 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\ApiMessages;
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Resources\BrandResource;
 use App\Http\Resources\CategoryResource;
 use App\Http\Resources\ProductResource;
 use App\Modules\Catalog\Application\CatalogService;
+use App\Modules\Inventory\Application\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class CatalogController extends Controller
+class CatalogController extends ApiBaseController
 {
     public function __construct(
-        private CatalogService $catalogService
+        private CatalogService $catalogService,
+        private InventoryService $inventoryService
     ) {
     }
 
@@ -23,9 +24,32 @@ class CatalogController extends Controller
     {
         $filters = $request->only(['search', 'category_id', 'brand_id']);
         $query = $this->catalogService->getPublishedProducts($filters);
-        $products = $query->paginate($request->get('per_page', 15));
+        $products = $query->paginate($this->getPerPage($request));
 
-        return ApiResponse::paginated($products, ProductResource::collection($products));
+        $availability = [];
+        $variantIds = $products->pluck('variants')->flatten()->pluck('id')->unique()->filter()->values()->all();
+        if ($variantIds !== []) {
+            $results = $this->inventoryService->checkAvailability(array_fill_keys($variantIds, 1));
+            foreach ($results as $r) {
+                $availability[$r->productVariantId] = $r->availableQty;
+            }
+        }
+        foreach ($products as $product) {
+            foreach ($product->variants ?? [] as $variant) {
+                $variant->available_quantity = $availability[$variant->id] ?? 0;
+            }
+        }
+
+        return $this->paginated($products, ProductResource::collection($products));
+    }
+
+    public function searchSuggestions(Request $request): JsonResponse
+    {
+        $q = $request->get('q', '');
+        $limit = min((int) $request->get('limit', 10), 20);
+        $suggestions = $this->catalogService->getSearchSuggestions($q, $limit);
+
+        return $this->success(['data' => $suggestions]);
     }
 
     public function product(string $slug): JsonResponse
@@ -33,17 +57,28 @@ class CatalogController extends Controller
         $model = $this->catalogService->getProductModelBySlug($slug);
 
         if (! $model) {
-            return ApiResponse::notFound('Product not found');
+            return $this->notFound(ApiMessages::PRODUCT_NOT_FOUND);
         }
 
-        return ApiResponse::data(new ProductResource($model));
+        $availability = [];
+        if ($model->relationLoaded('variants') && $model->variants->isNotEmpty()) {
+            $variantIds = $model->variants->pluck('id')->all();
+            $results = $this->inventoryService->checkAvailability(
+                array_fill_keys($variantIds, 1)
+            );
+            foreach ($results as $r) {
+                $availability[$r->productVariantId] = $r->availableQty;
+            }
+        }
+
+        return $this->data(new ProductResource($model, $availability));
     }
 
     public function categories(): JsonResponse
     {
         $categories = $this->catalogService->getAllCategories();
 
-        return ApiResponse::collection(CategoryResource::collection($categories));
+        return $this->collection(CategoryResource::collection($categories));
     }
 
     public function category(string $slug): JsonResponse
@@ -51,16 +86,16 @@ class CatalogController extends Controller
         $category = $this->catalogService->getCategoryBySlug($slug);
 
         if (! $category) {
-            return ApiResponse::notFound(ApiMessages::CATEGORY_NOT_FOUND);
+            return $this->notFound(ApiMessages::CATEGORY_NOT_FOUND);
         }
 
-        return ApiResponse::data(new CategoryResource($category));
+        return $this->data(new CategoryResource($category));
     }
 
     public function brands(): JsonResponse
     {
         $brands = $this->catalogService->getAllBrands();
 
-        return ApiResponse::collection(BrandResource::collection($brands));
+        return $this->collection(BrandResource::collection($brands));
     }
 }

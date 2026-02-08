@@ -18,7 +18,11 @@ class StockMovementResource extends JsonResource
             'reason_code' => $this->reason_code,
             'reference_type' => $this->reference_type,
             'reference_id' => $this->reference_id,
-            'created_at' => $this->created_at,
+            'created_at' => isset($this->created_at) && $this->created_at !== null
+            ? (method_exists($this->created_at, 'toIso8601String')
+                ? $this->created_at->toIso8601String()
+                : (string) $this->created_at)
+            : null,
             'product_variant' => $this->whenLoaded('productVariant', fn () => new ProductVariantResource($this->productVariant)),
             'warehouse' => $this->whenLoaded('warehouse', fn () => new WarehouseResource($this->warehouse)),
         ];

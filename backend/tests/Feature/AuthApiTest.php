@@ -69,6 +69,23 @@ class AuthApiTest extends TestCase
             ->assertJsonPath('user.id', $user->id);
     }
 
+    public function test_logout_revokes_current_token(): void
+    {
+        $user = User::factory()->create();
+        $user->assignRole('customer');
+        $token = $user->createToken('test')->plainTextToken;
+
+        $response = $this->postJson('/api/logout', [], [
+            'Authorization' => 'Bearer ' . $token,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('message', 'Logged out successfully');
+
+        // Tokens are revoked server-side; subsequent requests with the same token should be unauthenticated
+        $this->assertCount(0, $user->tokens()->get());
+    }
+
     public function test_admin_dashboard_requires_admin_role(): void
     {
         $user = User::factory()->create();

@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiBaseController;
+use App\Http\Requests\Admin\StoreRefundRequest;
 use App\Http\Resources\RefundResource;
 use App\Modules\Payment\Application\PaymentService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
-class RefundController extends Controller
+class RefundController extends ApiBaseController
 {
     public function __construct(
         private PaymentService $paymentService
@@ -19,23 +18,20 @@ class RefundController extends Controller
     /**
      * POST /admin/payments/{id}/refund - Create refund for a succeeded payment (admin).
      */
-    public function store(Request $request, int $id): JsonResponse
+    public function store(StoreRefundRequest $request, int $id): JsonResponse
     {
-        $request->validate([
-            'amount' => ['nullable', 'numeric', 'min:0.01'],
-            'reason' => ['nullable', 'string', 'max:255'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $refund = $this->paymentService->createRefund(
                 $id,
-                $request->input('amount') ? (float) $request->input('amount') : null,
-                $request->input('reason')
+                isset($validated['amount']) ? (float) $validated['amount'] : null,
+                $validated['reason'] ?? null
             );
         } catch (\DomainException $e) {
-            return ApiResponse::fromDomainException($e);
+            return $this->fromDomainException($e);
         }
 
-        return ApiResponse::data(new RefundResource($refund), 201);
+        return $this->data(new RefundResource($refund), 201);
     }
 }

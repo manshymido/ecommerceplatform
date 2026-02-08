@@ -5,6 +5,7 @@ namespace App\Modules\Shipping\Infrastructure\Models;
 use App\Modules\Order\Infrastructure\Models\Order as OrderModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Shipment extends Model
 {
@@ -28,5 +29,10 @@ class Shipment extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(OrderModel::class);
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(ShipmentItem::class);
     }
 }

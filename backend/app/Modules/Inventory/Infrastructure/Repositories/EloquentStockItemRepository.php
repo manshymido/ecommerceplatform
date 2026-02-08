@@ -101,6 +101,83 @@ class EloquentStockItemRepository implements StockItemRepository
         ]);
     }
 
+    public function setQuantity(int $productVariantId, int $warehouseId, int $quantity, string $reasonCode = 'assignment'): void
+    {
+        $quantity = max(0, $quantity);
+        $item = StockItemModel::where('product_variant_id', $productVariantId)
+            ->where('warehouse_id', $warehouseId)
+            ->first();
+
+        $oldQuantity = 0;
+        if (! $item) {
+            $item = StockItemModel::create([
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $warehouseId,
+                'quantity' => $quantity,
+                'safety_stock' => 0,
+            ]);
+        } else {
+            $oldQuantity = $item->quantity;
+            $item->update(['quantity' => $quantity]);
+        }
+
+        $delta = $quantity - $oldQuantity;
+        if ($delta !== 0) {
+            $type = $delta > 0 ? StockMovement::TYPE_IN : StockMovement::TYPE_OUT;
+            StockMovementModel::create([
+                'product_variant_id' => $productVariantId,
+                'warehouse_id' => $warehouseId,
+                'type' => $type,
+                'quantity' => $delta,
+                'reason_code' => $reasonCode,
+                'reference_type' => 'adjustment',
+                'reference_id' => null,
+                'created_at' => now(),
+            ]);
+        }
+    }
+
+    public function lockForUpdate(array $productVariantIds): void
+    {
+        if (empty($productVariantIds)) {
+            return;
+        }
+        StockItemModel::whereIn('product_variant_id', $productVariantIds)
+            ->lockForUpdate()
+            ->get();
+    }
+
+    /**
+     * @return array<string, int> key "variantId_warehouseId" => available quantity
+     */
+    public function getAvailableByVariantPerWarehouse(array $productVariantIds): array
+    {
+        if (empty($productVariantIds)) {
+            return [];
+        }
+        $items = StockItemModel::whereIn('product_variant_id', $productVariantIds)->get();
+        $reservedRows = \App\Modules\Inventory\Infrastructure\Models\StockReservation::query()
+            ->where('status', 'active')
+            ->whereIn('product_variant_id', $productVariantIds)
+            ->selectRaw('product_variant_id, warehouse_id, SUM(quantity) as total')
+            ->groupBy('product_variant_id', 'warehouse_id')
+            ->get();
+        $reserved = $reservedRows->keyBy(fn ($r) => $r->product_variant_id . '_' . $r->warehouse_id)
+            ->map(fn ($r) => (int) $r->total);
+
+        $result = [];
+        foreach ($items as $item) {
+            $key = $item->product_variant_id . '_' . $item->warehouse_id;
+            $reservedQty = (int) ($reserved[$key] ?? 0);
+            $available = max(0, $item->quantity - $item->safety_stock - $reservedQty);
+            if ($available > 0) {
+                $result[$key] = ($result[$key] ?? 0) + $available;
+            }
+        }
+
+        return $result;
+    }
+
     private function toDomain(StockItemModel $model): DomainStockItem
     {
         return new DomainStockItem(

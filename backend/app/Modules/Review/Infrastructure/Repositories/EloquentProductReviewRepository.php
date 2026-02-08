@@ -17,7 +17,10 @@ class EloquentProductReviewRepository implements ProductReviewRepository
     /** @return ProductReview[] */
     public function findByProduct(int $productId, ?string $status = 'approved', int $limit = 50): array
     {
-        $query = ProductReviewModel::where('product_id', $productId)->orderByDesc('created_at')->limit($limit);
+        $query = ProductReviewModel::with('user')
+            ->where('product_id', $productId)
+            ->orderByDesc('created_at')
+            ->limit($limit);
         if ($status !== null) {
             $query->where('status', $status);
         }
@@ -52,6 +55,8 @@ class EloquentProductReviewRepository implements ProductReviewRepository
             title: $model->title,
             body: $model->body,
             status: $model->status,
+            userName: $model->relationLoaded('user') ? $model->user?->name : null,
+            createdAt: $model->created_at?->toIso8601String(),
         );
     }
 }

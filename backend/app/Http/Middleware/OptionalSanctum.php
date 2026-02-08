@@ -15,6 +15,7 @@ class OptionalSanctum
             $user = Auth::guard('sanctum')->user();
             if ($user) {
                 Auth::guard('sanctum')->setUser($user);
+                $request->setUserResolver(fn () => $user);
             }
         }
 

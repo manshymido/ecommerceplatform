@@ -3,14 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\ApiMessages;
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Resources\OrderResource;
 use App\Modules\Order\Domain\OrderRepository;
+use App\Modules\Order\Infrastructure\Models\Order as OrderModel;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class OrderController extends Controller
+class OrderController extends ApiBaseController
 {
     public function __construct(
         private OrderRepository $orderRepository
@@ -18,15 +18,18 @@ class OrderController extends Controller
     }
 
     /**
-     * GET /orders - List orders for the authenticated user.
+     * GET /orders - List orders for the authenticated user (paginated).
      */
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
-        $limit = min((int) $request->get('per_page', 15), 50);
-        $orders = $this->orderRepository->findByUser($user->id, $limit);
+        $perPage = $this->getPerPage($request);
+        $orders = OrderModel::where('user_id', $user->id)
+            ->with('lines')
+            ->orderByDesc('created_at')
+            ->paginate($perPage);
 
-        return ApiResponse::collection(OrderResource::collection(collect($orders)));
+        return $this->paginated($orders, OrderResource::collection($orders));
     }
 
     /**
@@ -36,9 +39,9 @@ class OrderController extends Controller
     {
         $order = $this->orderRepository->findById($id);
         if (! $order || $order->userId !== $request->user()->id) {
-            return ApiResponse::notFound(ApiMessages::ORDER_NOT_FOUND);
+            return $this->notFound(ApiMessages::ORDER_NOT_FOUND);
         }
 
-        return ApiResponse::data(new OrderResource($order));
+        return $this->data(new OrderResource($order));
     }
 }

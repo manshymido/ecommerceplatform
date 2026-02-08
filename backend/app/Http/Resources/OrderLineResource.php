@@ -22,6 +22,7 @@ class OrderLineResource extends JsonResource
             'discount_currency' => $this->discount_currency ?? $this->discountCurrency,
             'tax_amount' => (float) ($this->tax_amount ?? $this->taxAmount),
             'total_line_amount' => (float) ($this->total_line_amount ?? $this->totalLineAmount),
+            'product_slug' => data_get($this->resource, 'productVariant.product.slug'),
         ];
     }
 }

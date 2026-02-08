@@ -14,7 +14,7 @@ class EloquentOrderRepository implements OrderRepository
 {
     public function findById(int $id): ?Order
     {
-        $model = OrderModel::with('lines')->find($id);
+        $model = OrderModel::with(['lines', 'user'])->find($id);
 
         return $model ? $this->toDomain($model) : null;
     }
@@ -71,6 +71,7 @@ class EloquentOrderRepository implements OrderRepository
             'total_amount' => $orderData['total_amount'],
             'billing_address_json' => $orderData['billing_address_json'] ?? null,
             'shipping_address_json' => $orderData['shipping_address_json'] ?? null,
+            'shipping_method_id' => $orderData['shipping_method_id'] ?? null,
             'shipping_method_code' => $orderData['shipping_method_code'] ?? null,
             'shipping_method_name' => $orderData['shipping_method_name'] ?? null,
             'tax_breakdown_json' => $orderData['tax_breakdown_json'] ?? null,
@@ -79,6 +80,7 @@ class EloquentOrderRepository implements OrderRepository
         foreach ($linesData as $line) {
             OrderLineModel::create([
                 'order_id' => $model->id,
+                'product_id' => $line['product_id'] ?? null,
                 'product_variant_id' => $line['product_variant_id'] ?? null,
                 'product_name_snapshot' => $line['product_name_snapshot'],
                 'sku_snapshot' => $line['sku_snapshot'],
@@ -156,6 +158,9 @@ class EloquentOrderRepository implements OrderRepository
             shippingAddress: $model->shipping_address_json,
             shippingMethodCode: $model->shipping_method_code,
             shippingMethodName: $model->shipping_method_name,
+            createdAt: $model->created_at?->toIso8601String(),
+            userEmail: $model->user?->email,
+            userName: $model->user?->name,
         );
     }
 }

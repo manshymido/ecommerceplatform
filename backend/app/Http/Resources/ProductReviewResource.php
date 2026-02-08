@@ -17,6 +17,12 @@ class ProductReviewResource extends JsonResource
             'title' => $this->title ?? null,
             'body' => $this->body ?? null,
             'status' => $this->status ?? null,
+            'user_name' => $this->userName ?? $this->user_name ?? null,
+            'created_at' => isset($this->created_at) && $this->created_at !== null
+            ? (method_exists($this->created_at, 'toIso8601String')
+                ? $this->created_at->toIso8601String()
+                : (string) $this->created_at)
+            : ($this->createdAt ?? null),
         ];
     }
 }

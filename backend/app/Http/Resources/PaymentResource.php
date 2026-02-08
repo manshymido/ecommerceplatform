@@ -17,6 +17,7 @@ class PaymentResource extends JsonResource
             'amount' => (float) ($this->amount ?? 0),
             'currency' => $this->currency,
             'status' => $this->status,
+            'refunds' => $this->whenLoaded('refunds', fn () => RefundResource::collection($this->refunds)),
         ];
     }
 }

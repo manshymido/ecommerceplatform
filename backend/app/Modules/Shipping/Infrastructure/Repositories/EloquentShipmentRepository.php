@@ -5,6 +5,7 @@ namespace App\Modules\Shipping\Infrastructure\Repositories;
 use App\Modules\Shipping\Domain\Shipment;
 use App\Modules\Shipping\Domain\ShipmentRepository;
 use App\Modules\Shipping\Infrastructure\Models\Shipment as ShipmentModel;
+use App\Modules\Shipping\Infrastructure\Models\ShipmentItem;
 
 class EloquentShipmentRepository implements ShipmentRepository
 {
@@ -35,6 +36,15 @@ class EloquentShipmentRepository implements ShipmentRepository
             'carrier_code' => $data['carrier_code'] ?? null,
             'status' => $data['status'] ?? Shipment::STATUS_PENDING,
         ]);
+
+        $items = $data['items'] ?? [];
+        foreach ($items as $item) {
+            ShipmentItem::create([
+                'shipment_id' => $model->id,
+                'order_line_id' => $item['order_line_id'],
+                'quantity' => $item['quantity'],
+            ]);
+        }
 
         return $this->toDomain($model);
     }

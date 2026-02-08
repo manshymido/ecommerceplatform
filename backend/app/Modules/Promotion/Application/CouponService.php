@@ -3,7 +3,6 @@
 namespace App\Modules\Promotion\Application;
 
 use App\Modules\Promotion\Infrastructure\Models\Coupon;
-use App\Modules\Promotion\Infrastructure\Models\Promotion;
 
 class CouponService
 {
@@ -46,16 +45,6 @@ class CouponService
         }
 
         return $discount > 0 ? (float) $discount : null;
-    }
-
-    /**
-     * Get coupon by code (for storing in cart_coupons with discount already calculated).
-     */
-    public function findValidCouponByCode(string $code): ?Coupon
-    {
-        $coupon = Coupon::where('code', $this->normalizeCode($code))->first();
-
-        return $coupon && $coupon->isCurrentlyValid() ? $coupon : null;
     }
 
     private function normalizeCode(string $code): string

@@ -9,7 +9,7 @@ class CartItemResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        return [
+        $arr = [
             'id' => $this->id,
             'product_variant_id' => $this->product_variant_id,
             'quantity' => $this->quantity,
@@ -18,10 +18,16 @@ class CartItemResource extends JsonResource
             'discount_amount' => (float) $this->discount_amount,
             'discount_currency' => $this->discount_currency,
             'line_total' => (float) ($this->unit_price_amount * $this->quantity - $this->discount_amount),
-            'product_variant' => $this->when(
-                $this->resource instanceof \Illuminate\Database\Eloquent\Model && $this->relationLoaded('productVariant'),
-                fn () => new ProductVariantResource($this->productVariant)
-            ),
+            'variant_name' => $this->variant_name ?? null,
+            'variant_sku' => $this->variant_sku ?? null,
+            'product_name' => $this->product_name ?? null,
+            'product_slug' => $this->product_slug ?? null,
+            'product_image_url' => $this->product_image_url ?? null,
         ];
+        if (isset($this->resource->available_quantity)) {
+            $arr['available_quantity'] = (int) $this->resource->available_quantity;
+        }
+
+        return $arr;
     }
 }

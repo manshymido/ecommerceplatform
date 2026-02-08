@@ -30,7 +30,7 @@ class ReviewService
             'rating' => $rating,
             'title' => $title,
             'body' => $body,
-            'status' => ProductReview::STATUS_PENDING,
+            'status' => ProductReview::STATUS_APPROVED,
         ]);
     }
 

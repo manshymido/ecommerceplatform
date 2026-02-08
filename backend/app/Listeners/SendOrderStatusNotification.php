@@ -9,9 +9,10 @@ use App\Events\OrderPaymentSucceeded;
 use App\Mail\OrderStatusMail;
 use App\Models\User;
 use App\Modules\Order\Domain\OrderRepository;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Mail;
 
-class SendOrderStatusNotification
+class SendOrderStatusNotification implements ShouldQueue
 {
     public function __construct(
         private OrderRepository $orderRepository
@@ -57,6 +58,6 @@ class SendOrderStatusNotification
             return;
         }
 
-        Mail::to($email)->send(new OrderStatusMail($order->orderNumber, $status, $reason));
+        Mail::to($email)->queue(new OrderStatusMail($order->orderNumber, $status, $reason));
     }
 }

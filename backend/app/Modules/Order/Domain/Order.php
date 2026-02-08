@@ -33,6 +33,9 @@ class Order
         public readonly ?array $shippingAddress = null,
         public readonly ?string $shippingMethodCode = null,
         public readonly ?string $shippingMethodName = null,
+        public readonly ?string $createdAt = null,
+        public readonly ?string $userEmail = null,
+        public readonly ?string $userName = null,
     ) {
     }
 

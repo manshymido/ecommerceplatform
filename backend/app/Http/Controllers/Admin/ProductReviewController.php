@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\ApiMessages;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Resources\ProductReviewResource;
 use App\Modules\Review\Application\ReviewService;
 use App\Modules\Review\Domain\ProductReviewRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ProductReviewController extends Controller
+class ProductReviewController extends ApiBaseController
 {
     public function __construct(
         private ProductReviewRepository $productReviewRepository,
@@ -33,9 +33,9 @@ class ProductReviewController extends Controller
         if ($productId !== null) {
             $query->where('product_id', $productId);
         }
-        $reviews = $query->paginate($request->get('per_page', 15));
+        $reviews = $query->paginate($this->getPerPage($request));
 
-        return ApiResponse::paginated($reviews, ProductReviewResource::collection($reviews));
+        return $this->paginated($reviews, ProductReviewResource::collection($reviews));
     }
 
     /**
@@ -45,7 +45,7 @@ class ProductReviewController extends Controller
     {
         $review = $this->productReviewRepository->findById($id);
         if (! $review) {
-            return ApiResponse::notFound('Review not found');
+            return $this->notFound(ApiMessages::REVIEW_NOT_FOUND);
         }
 
         $request->validate([
@@ -55,6 +55,6 @@ class ProductReviewController extends Controller
         $this->reviewService->moderateReview($id, $request->input('status'));
         $review = $this->productReviewRepository->findById($id);
 
-        return ApiResponse::data(new ProductReviewResource($review));
+        return $this->data(new ProductReviewResource($review));
     }
 }

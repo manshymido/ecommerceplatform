@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\ApiMessages;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Requests\AddWishlistItemRequest;
 use App\Http\Resources\WishlistResource;
 use App\Modules\Wishlist\Application\WishlistService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class WishlistController extends Controller
+class WishlistController extends ApiBaseController
 {
     public function __construct(
         private WishlistService $wishlistService
@@ -24,7 +24,7 @@ class WishlistController extends Controller
     {
         $wishlist = $this->wishlistService->getOrCreateWishlist($request->user()->id);
 
-        return ApiResponse::data(new WishlistResource($wishlist));
+        return $this->data(new WishlistResource($wishlist));
     }
 
     /**
@@ -37,7 +37,7 @@ class WishlistController extends Controller
             (int) $request->validated()['product_variant_id']
         );
 
-        return ApiResponse::data(new WishlistResource($wishlist), 201);
+        return $this->data(new WishlistResource($wishlist), 201);
     }
 
     /**
@@ -47,9 +47,9 @@ class WishlistController extends Controller
     {
         $wishlist = $this->wishlistService->removeItem($request->user()->id, $id);
         if ($wishlist === null) {
-            return ApiResponse::notFound('Wishlist item not found');
+            return $this->notFound(ApiMessages::WISHLIST_ITEM_NOT_FOUND);
         }
 
-        return ApiResponse::data(new WishlistResource($wishlist));
+        return $this->data(new WishlistResource($wishlist));
     }
 }

@@ -3,8 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\ApiMessages;
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\Controllers\ApiBaseController;
 use App\Http\Requests\StoreProductReviewRequest;
 use App\Http\Resources\ProductReviewResource;
 use App\Modules\Catalog\Application\CatalogService;
@@ -12,7 +11,7 @@ use App\Modules\Review\Application\ReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-class ProductReviewController extends Controller
+class ProductReviewController extends ApiBaseController
 {
     public function __construct(
         private CatalogService $catalogService,
@@ -27,12 +26,12 @@ class ProductReviewController extends Controller
     {
         $product = $this->catalogService->getProductModelBySlug($slug);
         if (! $product) {
-            return ApiResponse::notFound(ApiMessages::PRODUCT_NOT_FOUND);
+            return $this->notFound(ApiMessages::PRODUCT_NOT_FOUND);
         }
 
-        $reviews = $this->reviewService->getReviewsForProduct($product->id, true, (int) $request->get('per_page', 15));
+        $reviews = $this->reviewService->getReviewsForProduct($product->id, true, $this->getPerPage($request));
 
-        return ApiResponse::collection(ProductReviewResource::collection(collect($reviews)));
+        return $this->collection(ProductReviewResource::collection(collect($reviews)));
     }
 
     /**
@@ -42,7 +41,7 @@ class ProductReviewController extends Controller
     {
         $product = $this->catalogService->getProductModelBySlug($slug);
         if (! $product) {
-            return ApiResponse::notFound(ApiMessages::PRODUCT_NOT_FOUND);
+            return $this->notFound(ApiMessages::PRODUCT_NOT_FOUND);
         }
 
         $review = $this->reviewService->createReview(
@@ -53,6 +52,6 @@ class ProductReviewController extends Controller
             $request->validated()['body'] ?? null
         );
 
-        return ApiResponse::data(new ProductReviewResource($review), 201);
+        return $this->data(new ProductReviewResource($review), 201);
     }
 }

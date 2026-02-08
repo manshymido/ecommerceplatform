@@ -3,6 +3,7 @@
 namespace App\Modules\Promotion\Infrastructure\Models;
 
 use App\Models\User;
+use App\Modules\Order\Infrastructure\Models\Order;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,5 +26,10 @@ class CouponRedemption extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 }

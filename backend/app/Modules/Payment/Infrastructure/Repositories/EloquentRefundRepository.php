@@ -31,6 +31,7 @@ class EloquentRefundRepository implements RefundRepository
     {
         $model = RefundModel::create([
             'payment_id' => $data['payment_id'],
+            'order_id' => $data['order_id'] ?? null,
             'amount' => $data['amount'],
             'currency' => $data['currency'],
             'status' => $data['status'],

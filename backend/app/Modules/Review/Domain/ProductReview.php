@@ -16,6 +16,8 @@ class ProductReview
         public readonly ?string $title,
         public readonly ?string $body,
         public readonly string $status,
+        public readonly ?string $userName = null,
+        public readonly ?string $createdAt = null,
     ) {
     }
 }

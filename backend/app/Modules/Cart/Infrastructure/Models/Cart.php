@@ -42,6 +42,6 @@ class Cart extends Model
     /** Default relations to eager load when loading cart. */
     public static function defaultEagerLoads(): array
     {
-        return ['items', 'appliedCoupon'];
+        return ['items.productVariant.product', 'appliedCoupon'];
     }
 }

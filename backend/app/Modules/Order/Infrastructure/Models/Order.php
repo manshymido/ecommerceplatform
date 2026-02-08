@@ -22,6 +22,7 @@ class Order extends Model
         'total_amount',
         'billing_address_json',
         'shipping_address_json',
+        'shipping_method_id',
         'shipping_method_code',
         'shipping_method_name',
         'tax_breakdown_json',
@@ -54,5 +55,25 @@ class Order extends Model
     public function statusHistory(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class, 'order_id');
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Payment\Infrastructure\Models\Payment::class);
+    }
+
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(\App\Modules\Shipping\Infrastructure\Models\Shipment::class);
+    }
+
+    public function shippingMethod(): BelongsTo
+    {
+        return $this->belongsTo(\App\Modules\Shipping\Infrastructure\Models\ShippingMethod::class, 'shipping_method_id');
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(OrderReturn::class, 'order_id');
     }
 }

@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\ApiResponse;
-use App\Http\Controllers\Controller;
+use App\Http\ApiMessages;
+use App\Http\Controllers\ApiBaseController;
+use App\Http\Requests\Admin\StoreShipmentRequest;
+use App\Http\Requests\Admin\UpdateShipmentRequest;
 use App\Http\Resources\ShipmentResource;
 use App\Modules\Shipping\Application\FulfillmentService;
 use App\Modules\Shipping\Domain\ShipmentRepository;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
-class ShipmentController extends Controller
+class ShipmentController extends ApiBaseController
 {
     public function __construct(
         private ShipmentRepository $shipmentRepository,
@@ -25,70 +26,62 @@ class ShipmentController extends Controller
     {
         $shipments = $this->shipmentRepository->findByOrder($orderId);
 
-        return ApiResponse::collection(ShipmentResource::collection(collect($shipments)));
+        return $this->collection(ShipmentResource::collection(collect($shipments)));
     }
 
     /**
      * POST /admin/orders/{orderId}/shipments - Create shipment for a paid order.
      */
-    public function store(Request $request, int $orderId): JsonResponse
+    public function store(StoreShipmentRequest $request, int $orderId): JsonResponse
     {
-        $request->validate([
-            'tracking_number' => ['nullable', 'string', 'max:128'],
-            'carrier_code' => ['nullable', 'string', 'max:32'],
-        ]);
+        $validated = $request->validated();
 
         try {
             $shipment = $this->fulfillmentService->createShipment(
                 $orderId,
-                $request->input('tracking_number'),
-                $request->input('carrier_code')
+                $validated['tracking_number'] ?? null,
+                $validated['carrier_code'] ?? null
             );
         } catch (\DomainException $e) {
-            return ApiResponse::fromDomainException($e);
+            return $this->fromDomainException($e);
         }
 
-        return ApiResponse::data(new ShipmentResource($shipment), 201);
+        return $this->data(new ShipmentResource($shipment), 201);
     }
 
     /**
      * PATCH /admin/shipments/{id} - Update shipment (e.g. mark shipped, set tracking).
      */
-    public function update(Request $request, int $id): JsonResponse
+    public function update(UpdateShipmentRequest $request, int $id): JsonResponse
     {
         $shipment = $this->shipmentRepository->findById($id);
         if (! $shipment) {
-            return ApiResponse::notFound(ApiMessages::SHIPMENT_NOT_FOUND);
+            return $this->notFound(ApiMessages::SHIPMENT_NOT_FOUND);
         }
 
-        $request->validate([
-            'status' => ['sometimes', 'string', 'in:shipped,delivered'],
-            'tracking_number' => ['nullable', 'string', 'max:128'],
-            'carrier_code' => ['nullable', 'string', 'max:32'],
-        ]);
+        $validated = $request->validated();
+        $status = $validated['status'] ?? null;
 
-        $status = $request->input('status');
         if ($status === 'shipped') {
             $this->fulfillmentService->markShipped(
                 $id,
-                $request->input('tracking_number') ?? $shipment->trackingNumber,
-                $request->input('carrier_code') ?? $shipment->carrierCode
+                $validated['tracking_number'] ?? $shipment->trackingNumber,
+                $validated['carrier_code'] ?? $shipment->carrierCode
             );
         } elseif ($status === 'delivered') {
             $this->fulfillmentService->markDelivered($id);
-        } elseif ($request->has('tracking_number') || $request->has('carrier_code')) {
-            $data = [];
-            if ($request->has('tracking_number')) {
-                $data['tracking_number'] = $request->input('tracking_number');
+        } elseif (array_key_exists('tracking_number', $validated) || array_key_exists('carrier_code', $validated)) {
+            $data = array_filter([
+                'tracking_number' => $validated['tracking_number'] ?? null,
+                'carrier_code' => $validated['carrier_code'] ?? null,
+            ], fn ($v) => $v !== null);
+            if ($data !== []) {
+                $this->shipmentRepository->update($id, $data);
             }
-            if ($request->has('carrier_code')) {
-                $data['carrier_code'] = $request->input('carrier_code');
-            }
-            $this->shipmentRepository->update($id, $data);
         }
 
         $shipment = $this->shipmentRepository->findById($id);
 
-        return ApiResponse::data(new ShipmentResource($shipment));
+        return $this->data(new ShipmentResource($shipment));
     }
 }
