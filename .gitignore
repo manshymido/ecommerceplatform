@@ -1,2 +1,5 @@
 # Cursor IDE – keep local, do not commit
 .cursorignore
+
+# Local docs – keep local, do not commit
+docs/
